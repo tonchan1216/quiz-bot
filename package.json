@@ -1,9 +1,12 @@
 {
   "name": "quiz-bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "quiz-bot",
+  "repository": {},
+  "main": "main.js",
   "scripts": {
+    "lint": "eslint main.ts",
+    "lint:fix": "eslint --fix main.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -11,10 +14,13 @@
   "license": "ISC",
   "devDependencies": {
     "@google/clasp": "^2.3.0",
-    "prettier": "^2.2.1",
-    "tslint": "^6.1.3",
-    "tslint-config-prettier": "^1.18.0",
-    "tslint-plugin-prettier": "^2.3.0"
+    "@typescript-eslint/eslint-plugin": "^4.14.1",
+    "@typescript-eslint/parser": "^4.14.1",
+    "eslint": "^7.19.0",
+    "eslint-config-prettier": "^7.2.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-prettier": "^3.3.1",
+    "prettier": "^2.2.1"
   },
   "dependencies": {
     "@types/google-apps-script": "^1.0.22"
