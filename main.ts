@@ -1,24 +1,22 @@
-type Contents = {
-  blocks: Array<{
+type Contents = Array<{
+  type: string
+  text?: Text
+  accessory?: {
     type: string
-    text?: Text
-    accessory?: {
-      type: string
-      options: Array<{
-        text: Text
-        description: Text
-        value: string
-      }>
-      action_id?: string
-    }
-    elements?: Array<{
-      type: string
+    options: Array<{
       text: Text
+      description: Text
       value: string
-      action_id: string
     }>
+    action_id?: string
+  }
+  elements?: Array<{
+    type: string
+    text: Text
+    value: string
+    action_id: string
   }>
-}
+}>
 
 type Text = {
   type: string
@@ -37,7 +35,8 @@ function postMessage(contents: Contents, thread_ts = '') {
     token: ACCESS_TOKEN,
     channel: CHANNEL_ID,
     thread_ts: thread_ts,
-    blocks: contents,
+    text: '',
+    blocks: JSON.stringify(contents),
   }
 
   const params: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
@@ -61,86 +60,88 @@ function getQuestion(): { id: string; contents: Contents } {
   const id: string = sheet?.getRange(row, 1).getValue()
   const question: string = sheet?.getRange(row, 2).getValue()
 
-  const contents = {
-    blocks: [
-      {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: '<!channel>\n第' + id + '問',
-        },
+  const contents: Contents = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: 'Today Question: No.' + id,
+        emoji: true,
       },
-      {
-        type: 'section',
-        text: {
-          type: 'plain_text',
-          text: question,
-        },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'plain_text',
+        text: question,
+        emoji: true,
       },
-      { type: 'divider' },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'This is a section block with checkboxes.',
-        },
-        accessory: {
-          type: 'checkboxes',
-          options: [
-            {
-              text: {
-                type: 'mrkdwn',
-                text: '*this is mrkdwn text*',
-              },
-              description: {
-                type: 'mrkdwn',
-                text: '*this is mrkdwn text*',
-              },
-              value: 'value-0',
-            },
-            {
-              text: {
-                type: 'mrkdwn',
-                text: '*this is mrkdwn text*',
-              },
-              description: {
-                type: 'mrkdwn',
-                text: '*this is mrkdwn text*',
-              },
-              value: 'value-1',
-            },
-            {
-              text: {
-                type: 'mrkdwn',
-                text: '*this is mrkdwn text*',
-              },
-              description: {
-                type: 'mrkdwn',
-                text: '*this is mrkdwn text*',
-              },
-              value: 'value-2',
-            },
-          ],
-          action_id: 'checkboxes-action',
-        },
+    },
+    {
+      type: 'divider',
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: '選択肢',
       },
-      {
-        type: 'actions',
-        elements: [
+      accessory: {
+        type: 'checkboxes',
+        options: [
           {
-            type: 'button',
             text: {
-              type: 'plain_text',
-              text: 'Click Me',
-              emoji: true,
+              type: 'mrkdwn',
+              text: '*this is mrkdwn text*',
             },
-            value: 'click_me_123',
-            action_id: 'actionId-0',
+            description: {
+              type: 'mrkdwn',
+              text: '*this is mrkdwn text*',
+            },
+            value: 'value-0',
+          },
+          {
+            text: {
+              type: 'mrkdwn',
+              text: '*this is mrkdwn text*',
+            },
+            description: {
+              type: 'mrkdwn',
+              text: '*this is mrkdwn text*',
+            },
+            value: 'value-1',
+          },
+          {
+            text: {
+              type: 'mrkdwn',
+              text: '*this is mrkdwn text*',
+            },
+            description: {
+              type: 'mrkdwn',
+              text: '*this is mrkdwn text*',
+            },
+            value: 'value-2',
           },
         ],
+        action_id: 'checkboxes-action',
       },
-    ],
-  }
+    },
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: '解答',
+            emoji: true,
+          },
+          value: 'click_me_123',
+          action_id: 'actionId-0',
+        },
+      ],
+    },
+  ]
 
   return { id, contents }
 }
@@ -153,32 +154,30 @@ function getAnswer(id: string): Contents {
   const row: number = ids.indexOf(parseInt(id))
   const answer: string = sheet?.getRange(row + 1, 3).getValue()
 
-  const contents: Contents = {
-    blocks: [
-      {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: '答え：\n',
-        },
+  const contents: Contents = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: '答え：',
       },
-      {
-        type: 'section',
-        text: {
-          type: 'plain_text',
-          text: answer,
-        },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'plain_text',
+        text: answer,
       },
-      { type: 'divider' },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'This is a section block with checkboxes.',
-        },
+    },
+    { type: 'divider' },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: 'This is a section block with checkboxes.',
       },
-    ],
-  }
+    },
+  ]
 
   return contents
 }
