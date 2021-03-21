@@ -24,6 +24,15 @@ type Text = {
   emoji?: boolean
 }
 
+type Event = {
+  queryString: string
+  contentLength: number
+  parameter: {
+    payload: string
+  }
+  contextPath: string
+}
+
 function postMessage(contents: Contents, thread_ts = '') {
   const prop = PropertiesService.getScriptProperties().getProperties()
   const ACCESS_TOKEN: string = prop.ACCESS_TOKEN
@@ -50,6 +59,7 @@ function postMessage(contents: Contents, thread_ts = '') {
 }
 
 function getQuestion(): { id: string; contents: Contents } {
+  const alphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('question_master')
 
   const lastRow: number = sheet?.getLastRow() ?? 2
@@ -59,6 +69,25 @@ function getQuestion(): { id: string; contents: Contents } {
   //ランダムに算出した行番号のテキストを取得
   const id: string = sheet?.getRange(row, 1).getValue()
   const question: string = sheet?.getRange(row, 2).getValue()
+  const selectNum: number = parseInt(sheet?.getRange(row, 5).getValue())
+  const selections = sheet?.getRange(row, 6, 1, selectNum).getValues().flat() ?? []
+  const options: Array<{
+    text: Text
+    description: Text
+    value: string
+  }> = selections.map((selection, index) => {
+    return {
+      text: {
+        type: 'mrkdwn',
+        text: alphabet[index],
+      },
+      description: {
+        type: 'mrkdwn',
+        text: selection,
+      },
+      value: alphabet[index],
+    }
+  })
 
   const contents: Contents = [
     {
@@ -88,42 +117,8 @@ function getQuestion(): { id: string; contents: Contents } {
       },
       accessory: {
         type: 'checkboxes',
-        options: [
-          {
-            text: {
-              type: 'mrkdwn',
-              text: '*this is mrkdwn text*',
-            },
-            description: {
-              type: 'mrkdwn',
-              text: '*this is mrkdwn text*',
-            },
-            value: 'value-0',
-          },
-          {
-            text: {
-              type: 'mrkdwn',
-              text: '*this is mrkdwn text*',
-            },
-            description: {
-              type: 'mrkdwn',
-              text: '*this is mrkdwn text*',
-            },
-            value: 'value-1',
-          },
-          {
-            text: {
-              type: 'mrkdwn',
-              text: '*this is mrkdwn text*',
-            },
-            description: {
-              type: 'mrkdwn',
-              text: '*this is mrkdwn text*',
-            },
-            value: 'value-2',
-          },
-        ],
-        action_id: 'checkboxes-action',
+        options: options,
+        action_id: 'checkboxes',
       },
     },
     {
@@ -136,8 +131,8 @@ function getQuestion(): { id: string; contents: Contents } {
             text: '解答',
             emoji: true,
           },
-          value: 'click_me_123',
-          action_id: 'actionId-0',
+          value: 'submit',
+          action_id: 'submit',
         },
       ],
     },
@@ -151,8 +146,9 @@ function getAnswer(id: string): Contents {
   const ids = sheet?.getRange('A2:A').getValues().flat() ?? []
 
   //対象IDの問題文の行を選択
-  const row: number = ids.indexOf(parseInt(id))
-  const answer: string = sheet?.getRange(row + 1, 3).getValue()
+  const row: number = ids.indexOf(parseInt(id)) + 1
+  const answer: string = sheet?.getRange(row, 3).getValue()
+  const solution: string = sheet?.getRange(row, 4).getValue()
 
   const contents: Contents = [
     {
@@ -174,7 +170,7 @@ function getAnswer(id: string): Contents {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: 'This is a section block with checkboxes.',
+        text: solution,
       },
     },
   ]
@@ -227,4 +223,48 @@ function solution() {
   if (response['ok']) {
     sheet?.getRange(row, 4).setValue('done')
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function doPost(e: Event): GoogleAppsScript.Content.TextOutput {
+  // exploit JSON from payload
+  const parameter = e.parameter
+  const data = parameter.payload
+  const json = JSON.parse(decodeURIComponent(data))
+
+  if (json.actions[0].action_id != 'submit') {
+    return ContentService.createTextOutput(JSON.stringify({ content: 'post ok' })).setMimeType(
+      ContentService.MimeType.JSON
+    )
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('post_log')
+  const row: number = (sheet?.getLastRow() ?? 1) + 1
+  const now: Date = new Date()
+
+  sheet?.getRange(row, 1).setValue(now.toJSON())
+  const value: any = Object.values(json.state.values)[0]
+  const selected_option = value['checkboxes']['selected_options']
+  sheet?.getRange(row, 2).setValue(selected_option[0])
+  sheet?.getRange(row, 3).setValue(data)
+
+  // // reply message
+  const replyMessage = {
+    response_type: 'ephemeral',
+    replace_original: false,
+    text: 'test',
+    thread_ts: json.message.ts,
+  }
+
+  const params: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
+    method: 'post',
+    payload: JSON.stringify(replyMessage),
+  }
+
+  // Slackに投稿
+  const response = UrlFetchApp.fetch(json.response_url, params)
+
+  return ContentService.createTextOutput(JSON.stringify({ content: 'post ok' })).setMimeType(
+    ContentService.MimeType.JSON
+  )
 }
